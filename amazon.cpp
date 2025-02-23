@@ -9,6 +9,7 @@
 #include "db_parser.h"
 #include "product_parser.h"
 #include "util.h"
+#include "mydatastore.h"
 
 using namespace std;
 struct ProdNameSorter {
@@ -29,7 +30,7 @@ int main(int argc, char* argv[])
      * Declare your derived DataStore object here replacing
      *  DataStore type to your derived type
      ****************/
-    DataStore ds;
+	 MyDataStore ds;
 
 
 
@@ -100,9 +101,56 @@ int main(int argc, char* argv[])
                 done = true;
             }
 	    /* Add support for other commands here */
+			else if ( cmd == "ADD" ) {
+				string username;
+				int hit_result_index;
+				if (!(ss>> username >> hit_result_index)) {
+					cout << "Invalid request" << endl;
+					continue;
+				}
 
+				User* user = nullptr;
+				for (std::set<User*>::iterator it = ds.getAllUsers().begin(); it != ds.getAllUsers().end(); it++) {
+					if ((*it)->getName() == username) {
+						user = *it;
+						break;
+					}
+				}
 
+				if (!user) {
+					cout << "Invalid request" << endl;
+					continue;
+				}
 
+				if (hit_result_index < 1 || hit_result_index > hits.size()) {
+					cout << "Invalid request" << endl;
+					continue;
+				}
+
+				ds.addToCart(user, hits[hit_result_index -1]);
+
+			}
+			else if ( cmd == "VIEWCART" ) {
+				string username;
+
+				if (!(ss >> username)) {
+					cout << "Invalid username" << endl;
+					continue;
+				}
+
+				ds.viewCart(username);
+			}
+
+			else if ( cmd == "BUYCART" ) {
+				string username;
+
+				if (!(ss >> username)) {
+					cout << "Invalid username" << endl;
+					continue;
+				}
+
+				ds.buyCart(username);
+			}
 
             else {
                 cout << "Unknown command" << endl;
