@@ -11,7 +11,7 @@ Book::~Book() {}
 
 std::set<std::string> Book::keywords() const{
 	std::string potentialBookKeywords = name_ + " " + ISBN_ + " " + author_;
-	return parseStringToWords(potentialBookKeywords);
+    return parseStringToWords(potentialBookKeywords);
 }
 
 std::string Book::displayString() const {
@@ -19,5 +19,5 @@ std::string Book::displayString() const {
 }
 
 void Book::dump(std::ostream& os) const {
-	os << category_ << endl << name_ << endl << price_ << endl << qty_ << endl << ISBN_ << endl << author_;
+	os << category_ << endl << name_ << endl << price_ << endl << qty_ << endl << ISBN_ << endl << author_ << endl;
 }

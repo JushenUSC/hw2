@@ -1,7 +1,21 @@
 #include "mydatastore.h"
 #include "util.h"
 
+MyDataStore::~MyDataStore() {
+	for (std::set<Product*>::iterator it = productsSet.begin(); it != productsSet.end(); it++) {
+		delete (*it);
+	}
+	productsSet.clear();
+	for (std::set<User*>::iterator it = usersSet.begin(); it != usersSet.end(); it++) {
+		delete (*it);
+	}
+	usersSet.clear();
+	keywordsAndProducts.clear();
+	usersAndCarts.clear();
+}
+
 void MyDataStore::addProduct(Product* p) {
+
 	//gets the keywords from the specific product
 	std::set<std::string> productKeywords = p->keywords();
 
@@ -23,6 +37,7 @@ void MyDataStore::addProduct(Product* p) {
 
 	//add product to productsSet as well
 	productsSet.insert(p);
+	
 }
 
 void MyDataStore::addUser(User* u) {
@@ -32,21 +47,33 @@ void MyDataStore::addUser(User* u) {
 std::vector<Product*> MyDataStore::search(std::vector<std::string>& terms, int type) {
 	//we have a mapping with keywords and associated products
 	std::vector<Product*> resultsVector;
+	if (terms.empty()) {
+        return resultsVector;
+    }
 	if (type == 0) {
-		std::map<std::string, std::set<Product*>>::iterator firstKeywordResultingPair = keywordsAndProducts.find(terms[0]);
-		std::set<Product*> firstKeywordMatchingProducts = firstKeywordResultingPair->second;
+		std::map<std::string, std::set<Product*>>::iterator firstKeywordPair = keywordsAndProducts.find(convToLower(terms[0]));
+		if (firstKeywordPair == keywordsAndProducts.end()) {
+            return resultsVector; 
+        }
+		std::set<Product*> matchingProducts = firstKeywordPair->second;
 		for (int i = 1; i < terms.size(); i++) {
-			firstKeywordMatchingProducts = setIntersection(firstKeywordMatchingProducts, keywordsAndProducts.find(terms[i])->second);
+			std::map<std::string, std::set<Product*>>::iterator nextKeywordPair = keywordsAndProducts.find(convToLower(terms[i]));
+			if (nextKeywordPair == keywordsAndProducts.end()) {
+                return resultsVector; // No match, AND fails
+            }
+			matchingProducts = setIntersection(matchingProducts, nextKeywordPair->second);
 		}
-		resultsVector = vector<Product*>(firstKeywordMatchingProducts.begin(), firstKeywordMatchingProducts.end());
+		resultsVector = vector<Product*>(matchingProducts.begin(), matchingProducts.end());
 	}
 	else {
-		std::map<std::string, std::set<Product*>>::iterator firstKeywordResultingPair = keywordsAndProducts.find(terms[0]);
-		std::set<Product*> firstKeywordMatchingProducts = firstKeywordResultingPair->second;
-		for (int i = 1; i < terms.size(); i++) {
-			firstKeywordMatchingProducts = setUnion(firstKeywordMatchingProducts, keywordsAndProducts.find(terms[i])->second);
+		std::set<Product*> matchingProducts;
+		for (int i = 0; i < terms.size(); i++) {
+			std::map<std::string, std::set<Product*>>::iterator keywordPair = keywordsAndProducts.find(convToLower(terms[i]));
+			if (keywordPair != keywordsAndProducts.end()) {
+                matchingProducts = setUnion(matchingProducts, keywordPair->second);
+            }
 		}
-		resultsVector = vector<Product*>(firstKeywordMatchingProducts.begin(), firstKeywordMatchingProducts.end());
+		resultsVector = vector<Product*>(matchingProducts.begin(), matchingProducts.end());
 	}
 	return resultsVector;
 }
@@ -79,25 +106,31 @@ User* MyDataStore::usernameToUser(std::string username) const {
 }
 
 void MyDataStore::addToCart(User* user, Product* p) {
-	std::map<User*, std::deque<Product*>>::iterator foundUserAndTheirCart = usersAndCarts.find(user);
-	(foundUserAndTheirCart->second).push_back(p);
+	if (usersAndCarts.find(user) == usersAndCarts.end()) {
+		//create new deque for user because they have yet to have one created
+		usersAndCarts[user] = std::deque<Product*>();
+	}
+	usersAndCarts[user].push_back(p);
 }
 
 void MyDataStore::viewCart(const std::string username) const {
 	User* foundUser = usernameToUser(username);
 	if (!foundUser) {
 		cout << "Invalid username" << endl;
+		return;
 	}
 	//print the associated cart to the console
-	else {
-		const std::deque<Product*>& usersCart = (usersAndCarts.find(foundUser))->second;
-		int itemIndex = 1;
-		for (std::deque<Product*>::const_iterator it = usersCart.begin(); it != usersCart.end(); it++) {
-			cout << "Item " << itemIndex << endl;
-			cout << (*it)->displayString() << endl;
-			cout << endl;
-			itemIndex++;
-		}
+	std::map<User*, std::deque<Product*>>::const_iterator it = (usersAndCarts.find(foundUser));
+	if (it == usersAndCarts.end()) {
+		return;
+	}
+	const std::deque<Product*>& usersCart = it->second;
+	int itemIndex = 1;
+	for (std::deque<Product*>::const_iterator it = usersCart.begin(); it != usersCart.end(); it++) {
+		cout << "Item " << itemIndex << endl;
+		cout << (*it)->displayString() << endl;
+		cout << endl;
+		itemIndex++;
 	}
 }
 
@@ -106,18 +139,20 @@ void MyDataStore::buyCart(const std::string username) {
 	if (!foundUser) {
 		cout << "Invalid username" << endl;
 	}
-	else {
-		std::deque<Product*>& usersCart = (usersAndCarts.find(foundUser))->second;
-		while (!(usersCart.empty())) {
-			Product* currProduct = usersCart.front();
-			if (currProduct->getQty() > 0 && foundUser->getBalance() >= currProduct->getPrice()) {
-				currProduct->subtractQty(1);
-				foundUser->deductAmount(currProduct->getPrice());
-				usersCart.pop_front();
-			}
-			else {
-				break;
-			}
+	std::map<User*, std::deque<Product*>>::iterator it = (usersAndCarts.find(foundUser));
+	if (it == usersAndCarts.end()) {
+		return;
+	}
+	std::deque<Product*>& usersCart = it->second;
+	while (!(usersCart.empty())) {
+		Product* currProduct = usersCart.front();
+		if (currProduct->getQty() > 0 && foundUser->getBalance() >= currProduct->getPrice()) {
+			currProduct->subtractQty(1);
+			foundUser->deductAmount(currProduct->getPrice());
+			usersCart.pop_front();
+		}
+		else {
+			break;
 		}
 	}
 }

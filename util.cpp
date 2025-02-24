@@ -17,32 +17,25 @@ std::set<std::string> parseStringToWords(string rawWords)
 {
 	//trim the word first before turning it into a set
 	rawWords = trim(rawWords);
-
 	//turn input into stringstream to read from it like cin...
-	stringstream inputWords = stringstream(rawWords);
+	stringstream inputWords(rawWords);
 	string currentWord;
-
 	//create the set that will be returned
 	set<string> keywordSet;
-
 	while (inputWords >> currentWord) {
 		int currentWordLength = currentWord.size();
-
 		//ISBN Number check
-		if (currentWordLength == 15 && currentWord[4] == '-' && currentWord[14] == '-') {
+		if (currentWordLength == 15 && currentWord[3] == '-' && currentWord[13] == '-') {
 			keywordSet.insert(currentWord);
 			continue;
 		}
 		//if length is greater than 2, then its eligible to be added as keyWord
 		if (currentWordLength > 2) {
-
-			bool firstKeyWord = true;
 			int beginningOfWord = 0;
-
 			for (int i = 0; i < currentWordLength; i++) {
-				if (ispunct(currentWord[i]) == true && firstKeyWord == true) { //for first keyword, if there is more than one keyword separated by punctuation
+				if (ispunct(currentWord[i])) { 
 					//create substring from 0 to i
-					string newSetWord = currentWord.substr(0, i);
+					string newSetWord = currentWord.substr(beginningOfWord, i - beginningOfWord);
 					//add to set only if substring length is greater than two
 					if (newSetWord.size() > 2) {
 						newSetWord = convToLower(newSetWord);
@@ -50,22 +43,8 @@ std::set<std::string> parseStringToWords(string rawWords)
 					}
 					//set beginningOfWord to i
 					beginningOfWord = i + 1;
-					firstKeyWord = false;
-					continue;
 				}
-				if (ispunct(currentWord[i]) == true && firstKeyWord == false) { //for second keyword, if there is more than one
-					//create substring from beginningOfWord to i
-					string newSetWord = currentWord.substr(beginningOfWord, i-beginningOfWord);
-					//add to set only if substring length is greater than 2
-					if (newSetWord.size() > 2) {
-						newSetWord = convToLower(newSetWord);
-						keywordSet.insert(newSetWord);
-					}
-					//set beginningOfWord to i
-					beginningOfWord = i+1;
-					continue;
-				}
-				if (i==currentWordLength) { //general case for last word, or first word if there is no punctuation
+				if (i==currentWordLength - 1 && beginningOfWord < currentWordLength) { //general case for last word, or first word if there is no punctuation
 					//create substring from beginningOfWord to i
 					string newSetWord = currentWord.substr(beginningOfWord);
 					//add to set only if the substring length is greater than 2
@@ -77,9 +56,7 @@ std::set<std::string> parseStringToWords(string rawWords)
 				}
 			}
 		}
-		
 	}
-	
 	return keywordSet;
 }
 

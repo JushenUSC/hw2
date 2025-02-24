@@ -6,6 +6,7 @@
 
 class MyDataStore : public DataStore {
 public:
+	~MyDataStore();
 	void addProduct(Product* p);
 	void addUser(User* u);
 	std::vector<Product*> search(std::vector<std::string>& terms, int type);

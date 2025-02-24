@@ -109,13 +109,7 @@ int main(int argc, char* argv[])
 					continue;
 				}
 
-				User* user = nullptr;
-				for (std::set<User*>::iterator it = ds.getAllUsers().begin(); it != ds.getAllUsers().end(); it++) {
-					if ((*it)->getName() == username) {
-						user = *it;
-						break;
-					}
-				}
+				User* user = ds.usernameToUser(username);
 
 				if (!user) {
 					cout << "Invalid request" << endl;
